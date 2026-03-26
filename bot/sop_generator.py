@@ -20,6 +20,7 @@ from datetime import datetime
 import anthropic
 
 from config import MODEL, YOUR_NICHE, YOUR_AUDIENCE, YOUR_TONE, OUTPUT_DIR
+from memory import get_memory_context, save_week_snapshot
 
 log = logging.getLogger(__name__)
 client = anthropic.Anthropic()
@@ -142,6 +143,10 @@ def generate_weekly_sop(analysis: dict, week_number: int) -> tuple[str, str]:
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     date_str = datetime.now().strftime("%Y-%m-%d")
+
+    # --- Save to memory before generating ---
+    log.info("Saving week snapshot to memory...")
+    save_week_snapshot(week, analysis)
 
     # --- Generate full SOP ---
     log.info("Generating weekly SOP...")

@@ -17,12 +17,13 @@ from typing import Any
 import anthropic
 
 from config import MODEL, YOUR_NICHE, YOUR_AUDIENCE, TWEETS_TO_ANALYZE
+from memory import get_memory_context
 
 log = logging.getLogger(__name__)
 client = anthropic.Anthropic()
 
 
-def _build_analysis_prompt(tweets: list[dict]) -> str:
+def _build_analysis_prompt(tweets: list[dict], week: int = 1) -> str:
     tweet_block = ""
     for i, t in enumerate(tweets, 1):
         tweet_block += (
@@ -33,10 +34,14 @@ def _build_analysis_prompt(tweets: list[dict]) -> str:
             f"URL: {t.get('url', 'n/a')}\n"
         )
 
+    memory_context = get_memory_context(week)
+
     return f"""You are an expert X (Twitter) content strategist specialising in the niche:
 "{YOUR_NICHE}"
 
 Target audience: {YOUR_AUDIENCE}
+
+{memory_context}
 
 Below are {len(tweets)} high-performing tweets from this niche this week.
 Study them carefully and extract the content frameworks that made them successful.
@@ -79,16 +84,17 @@ Analyse ALL {len(tweets)} tweets and return a JSON object with this exact struct
 Return ONLY the JSON — no markdown fences, no preamble."""
 
 
-def analyze_tweets(tweets: list[dict]) -> dict[str, Any]:
+def analyze_tweets(tweets: list[dict], week: int = 1) -> dict[str, Any]:
     """
     Send tweets to Claude for pattern analysis.
     Uses adaptive thinking + streaming for deep analysis.
+    Injects historical memory so analysis improves each week.
     Returns structured analysis dict.
     """
     top_tweets = tweets[:TWEETS_TO_ANALYZE]
-    log.info(f"Sending {len(top_tweets)} tweets to Claude for analysis...")
+    log.info(f"Sending {len(top_tweets)} tweets to Claude for analysis (Week {week})...")
 
-    prompt = _build_analysis_prompt(top_tweets)
+    prompt = _build_analysis_prompt(top_tweets, week=week)
 
     # Stream the response — analysis can be long
     full_response = ""
