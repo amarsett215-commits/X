@@ -1,5 +1,7 @@
 """YouTube Data API v3 wrapper for fetching channel and video data."""
 
+from __future__ import annotations
+
 import os
 import re
 from googleapiclient.discovery import build

@@ -1,5 +1,7 @@
 """Core analysis engine - processes video data into structured insights."""
 
+from __future__ import annotations
+
 import re
 from collections import Counter
 from datetime import datetime
