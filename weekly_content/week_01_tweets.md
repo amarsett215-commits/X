@@ -72,20 +72,24 @@ Price accordingly.
 ---
 
 ### Tweet 4 — Sub-topic: Behind-the-scenes build
-**Format**: Accidental discovery story (stolen from @theisaacmed)
-**Emotion**: Surprise + "if they can, I can"
+**Format**: Day 0 build-in-public (honest, no income yet)
+**Emotion**: Vulnerability + relatability + curiosity
+**Strategy**: Document the journey from zero — people follow *becoming*, not just *being*
 
 ```
-I asked Claude to help me write a simple checklist.
+Day 1.
 
-It suggested turning it into a sellable template instead.
+I have $0 in digital product sales.
+I have no audience.
+I have no product.
 
-3 hours later I had a Notion product listed on Gumroad.
+I have Claude and a decision to build in public
+until that changes.
 
-I am not a designer.
-I am not a developer.
+I'm going to document everything — the prompts,
+the products, the failures, the first sale.
 
-I just said yes to what Claude suggested.
+Follow if you want to watch it happen.
 ```
 
 ---
@@ -156,99 +160,121 @@ Shipping the first product is.
 
 ---
 
-## Thread 1 — Sub-topic: Claude prompts that build real products
-**Format**: How-to thread with specifics
-**Emotion**: Awe + FOMO
-**Hook tweet**: Stat-driven opener
+## Thread 1 — Sub-topic: Build in public from Day 0
+**Format**: Live experiment — transparent process, no income claimed
+**Emotion**: Vulnerability → curiosity → trust → investment in your journey
+**Strategy**: Readers become followers because they want to see what happens next.
+            This is more powerful than a Stripe screenshot because it's unfolding in real time.
 
 ```
 TWEET 1 (Hook):
-I used Claude to build 3 digital products last month.
+I'm starting from zero.
 
-Combined revenue: $2,847
-Time invested: 11 hours total
-Coding skills required: zero
+No digital product.
+No audience.
+No income online.
 
-Here's the exact process for each one (with prompts):🧵
+I'm going to use Claude to build and sell a digital product
+in the next 7 days — and document every step publicly.
+
+Here's what Day 1 looked like: 🧵
 ```
 
 ```
 TWEET 2:
-Product 1: A prompt pack for coaches ($27)
+First decision: what to sell.
 
-Claude prompt I used:
+I asked Claude:
 
-"Create 30 coaching session prompts for life coaches
-working with clients on [topic].
-Format: question + why it works + follow-up question.
-Make them usable in real sessions, not generic."
+"I want to create a digital product that helps
+[target audience] with [problem].
+Give me 10 specific product ideas I could build
+in under 4 hours using only AI tools.
+Rank them by demand and ease of creation."
 
-Built in 45 minutes. Listed on Gumroad same day.
+Claude gave me 10 ideas in 90 seconds.
+I picked the one I'd actually want to buy myself.
 ```
 
 ```
 TWEET 3:
-Product 2: A freelancer rate calculator template ($17)
+The product I chose: a prompt pack.
 
-Claude prompt:
+Why:
+— No design skills needed
+— Can be built in one sitting
+— Easy to price ($9–$27 range)
+— Buyers can use it immediately (high perceived value)
+— Claude builds 80% of it for you
 
-"Build a Notion template that helps freelancers
-calculate their hourly rate based on:
-income goal, billable hours, expenses, taxes.
-Include a formula explanation and a pricing guide."
-
-Non-technical. High demand. Sold 40+ copies.
+If your first product isn't a prompt pack,
+you're making this harder than it needs to be.
 ```
 
 ```
 TWEET 4:
-Product 3: An ebook for solopreneurs ($47)
+The Claude prompt I used to build it:
 
-Claude prompt:
+"Create a pack of 30 prompts for [target audience]
+trying to [specific goal].
 
-"Write a 25-page ebook called '[Title]' for solopreneurs
-who want [outcome]. Include:
-- 5 core chapters with actionable steps
-- A quick-start checklist
-- Real examples (I'll fill these in)
-- A resource section"
+For each prompt include:
+- The prompt itself (copy-paste ready)
+- Why it works
+- Expected output
 
-Took 3 hours including editing and formatting in Canva.
+Make them specific, not generic.
+My audience is [describe them]."
+
+Output: 30 prompts in 12 minutes.
 ```
 
 ```
 TWEET 5:
-The pattern across all 3:
+What I did after Claude gave me the prompts:
 
-1. Find a problem your audience searches for
-2. Give Claude a specific output format, not a vague request
-3. Edit the output — add your voice, your examples
-4. Design in Canva (3 free templates exist for every product type)
-5. Price based on the value of the outcome, not hours spent
+1. Read every single one
+2. Deleted 6 that felt weak
+3. Rewrote 4 in my own voice
+4. Added 3 from my own experience
+5. Organized into 3 sections (beginner / intermediate / advanced)
+
+Total editing time: 47 minutes.
+
+Claude does the heavy lifting.
+You add the judgment.
 ```
 
 ```
 TWEET 6:
-The mistake most people make:
+Then I set up the storefront.
 
-They use Claude like Google.
-Vague prompts → vague products → $0 in sales.
+Gumroad account: free
+Product listing: 20 minutes
+Cover image (Canva free template): 15 minutes
+Price: $17
 
-Treat Claude like a contractor.
-Give it a brief. Specify the audience.
-Specify the format. Specify the outcome.
+Total time from idea to live product: 3 hours 14 minutes.
 
-Specific prompts → specific products → real sales.
+It hasn't sold yet.
+But it exists. That's more than it did this morning.
+
+Most people never get this far.
 ```
 
 ```
 TWEET 7 (CTA):
-If you want the exact prompts I used for all 3 products
-(plus 10 more product ideas with ready-to-use Claude prompts):
+Here's what I know after Day 1:
 
-They're in my free guide — link in bio.
+The hardest part isn't building the product.
+It's publishing it when zero people are watching.
 
-RT if this was useful. Someone in your feed needs to see this.
+I'm documenting this entire experiment publicly —
+the sales, the failures, what works, what doesn't.
+
+Follow to watch it unfold.
+
+Day 2 thread drops tomorrow. 🔁 RT so others can follow along.
 ```
 
 ---
@@ -376,3 +402,195 @@ Follow for more Claude income plays. New one drops every week.
 - Track which tweet gets the most impressions → expand it into a thread
 - Track which thread gets the most profile visits → turn it into a lead magnet
 - Any tweet hitting 500+ impressions → reply with "full guide in bio" as first comment
+
+---
+
+## BUILD-IN-PUBLIC DAILY TWEET SERIES (Day 2–7)
+**Strategy**: Each day is one standalone tweet teasing the next step.
+People follow the journey. The thread on Day 7 closes the loop.
+
+---
+
+### Day 2 — The Listing Is Live
+```
+Day 2 update:
+
+The product is live on Gumroad.
+Sales so far: $0.
+
+I told 0 people about it.
+
+Today I write the tweet that sends the first traffic to it.
+
+Here's the exact tweet I'm going to post — and why I wrote it this way:
+
+[screenshot of your Gumroad draft]
+```
+
+---
+
+### Day 3 — First Traffic
+```
+Day 3.
+
+I posted the tweet.
+137 people clicked the Gumroad link.
+Sales: $0
+
+Lesson: traffic ≠ sales.
+The page wasn't converting.
+
+Here's what I changed on the product description
+(and why it matters more than the tweet):
+```
+
+---
+
+### Day 4 — The Fix
+```
+Day 4.
+
+I rewrote the Gumroad page using this Claude prompt:
+
+"Rewrite this product description to lead with
+the outcome the buyer gets, not what's inside the product.
+Use plain language. No hype. End with one clear call to action."
+
+Before vs after:
+
+[paste old vs new description]
+
+Let's see if it changes anything.
+```
+
+---
+
+### Day 5 — First Sale
+```
+Day 5.
+
+First sale.
+
+$17.
+
+I know that's not life-changing.
+But something that didn't exist 5 days ago
+just made real money.
+
+Here's the one thing I changed that I think caused it:
+```
+
+*(Note: if no sale yet — post this instead)*
+```
+Day 5. Still at $0.
+
+I'm not quitting. I'm diagnosing.
+
+I asked Claude to review my product page and tweet
+and tell me the 3 most likely reasons it's not converting.
+
+Its answer was uncomfortably accurate.
+
+Here's what it said:
+```
+
+---
+
+### Day 6 — Doubling Down
+```
+Day 6.
+
+Instead of building a new product,
+I spent today improving the one I have.
+
+Added:
+— A bonus checklist (built with Claude in 20 min)
+— A stronger headline
+— 2 testimonials from people I gave free access to
+
+Raised the price from $17 → $27.
+
+Counterintuitive: raising the price often increases conversions.
+Here's why:
+```
+
+---
+
+### Day 7 — Week 1 Recap Thread
+```
+TWEET 1 (Hook):
+7 days ago I had $0 in digital product sales.
+
+Here's the full recap — what I built, what I learned,
+what I'd do differently, and what's next: 🧵
+```
+
+```
+TWEET 2:
+The product: a [X]-prompt pack for [audience]
+Built with: Claude
+Time to build: 3 hrs 14 min
+Platform: Gumroad
+Price: $17 → $27
+
+Week 1 revenue: $[real number — even if it's $17]
+```
+
+```
+TWEET 3:
+What worked:
+
+— Building in public created accountability
+— Documenting the process attracted followers
+— Claude removed every technical barrier
+— Specificity in the product page > cleverness
+```
+
+```
+TWEET 4:
+What didn't work:
+
+— My first tweet drove traffic but didn't convert
+— The original product description was too generic
+— I priced too low at first (undervalued the outcome)
+— I waited too long to ask for feedback from real people
+```
+
+```
+TWEET 5:
+The most important thing I learned:
+
+Shipping ugly beats planning perfect.
+
+The version of this product I published on Day 1
+was rough. But it was real.
+
+The feedback I got from real buyers in 7 days
+is worth more than 6 months of planning in private.
+```
+
+```
+TWEET 6:
+What's next:
+
+Week 2 goal: [specific target — e.g., 10 sales, $270]
+Week 2 plan: one new tweet format, one product page test, one email to my list
+
+I'm going to keep building in public until this becomes
+a real income stream — or I find out exactly why it doesn't.
+
+Either way you'll see it happen here.
+```
+
+```
+TWEET 7 (CTA):
+If you're thinking about building a digital product
+but haven't started yet —
+
+This thread is proof that Day 1 is just a decision.
+
+Follow for Week 2.
+Drop a reply if you're starting your own Day 1 today.
+
+I'll retweet the best ones.
+```
