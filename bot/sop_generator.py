@@ -146,7 +146,7 @@ def generate_weekly_sop(analysis: dict, week_number: int) -> tuple[str, str]:
 
     # --- Save to memory before generating ---
     log.info("Saving week snapshot to memory...")
-    save_week_snapshot(week, analysis)
+    save_week_snapshot(week_number, analysis)
 
     # --- Generate full SOP ---
     log.info("Generating weekly SOP...")

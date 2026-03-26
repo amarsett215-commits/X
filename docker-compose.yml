@@ -1,0 +1,53 @@
+version: "3.8"
+
+# X Account Bot + n8n — Full automation stack
+#
+# START:  docker compose up -d
+# STOP:   docker compose down
+# LOGS:   docker compose logs -f bot
+#
+# Access:
+#   Bot API:  http://localhost:8000
+#   n8n:      http://localhost:5678
+
+services:
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: x-account-bot
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BUFFER_ACCESS_TOKEN=${BUFFER_ACCESS_TOKEN}
+      - BUFFER_PROFILE_ID=${BUFFER_PROFILE_ID}
+      - BOT_BASE_URL=${BOT_BASE_URL:-http://localhost:8000}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
+      - EMAIL_TO=${EMAIL_TO}
+    volumes:
+      - ./bot/output:/app/output
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: x-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
+      - WEBHOOK_URL=${BOT_BASE_URL:-http://localhost:5678}
+      - BOT_BASE_URL=http://bot:8000
+      - EMAIL_TO=${EMAIL_TO}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - bot
+
+volumes:
+  n8n_data:
