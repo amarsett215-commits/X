@@ -37,7 +37,7 @@ Every Monday 6 AM
 | Tool | Cost | What it does |
 |---|---|---|
 | n8n self-hosted | $0 | Cron scheduler + orchestrator |
-| Buffer Essentials | $15/mo | Posts to X without X API |
+| Buffer Essentials | $6/mo | Posts to X without X API |
 | Server (optional) | $6/mo | DigitalOcean if you want 24/7 uptime |
 | Claude API | ~$15–30/mo | Analysis + content generation |
 | ngrok (local dev) | $0 | Exposes your Mac to the internet |
@@ -47,7 +47,7 @@ Every Monday 6 AM
 
 ## Step 1 — Get a Buffer account
 
-1. Go to **buffer.com** → sign up for Essentials ($15/month)
+1. Go to **buffer.com** → sign up for Essentials ($6/month)
 2. Connect your X (Twitter) account
 3. Go to **buffer.com/developers/apps** → Create app
 4. Copy the **Access Token** shown on the app page → save it
