@@ -29,6 +29,7 @@ EMPTY_MEMORY = {
         "total_weeks_run": 0,
         "niche": "Claude AI + digital products + make money online",
     },
+    "personal_profile": {},        # Account owner's real background — injected into every prompt
     "account_growth": [],          # [{week, date, followers, following}]
     "weekly_snapshots": [],        # Summary of each week's analysis
     "format_leaderboard": {},      # format_name → {appearances, total_engagement, avg_engagement}
@@ -63,16 +64,49 @@ def _save(memory: dict) -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+
+def save_personal_profile(profile: dict) -> None:
+    """Save the account owner's personal background to memory."""
+    mem = _load()
+    mem["personal_profile"] = profile
+    _save(mem)
+    log.info("Personal profile saved to memory.")
+
+
+def get_personal_profile() -> dict:
+    """Return the stored personal profile dict."""
+    return _load().get("personal_profile", {})
+
+
 def get_memory_context(week: int) -> str:
     """
     Returns a formatted memory block to inject into Claude prompts.
     Gives Claude historical context so analysis improves each week.
     """
     mem = _load()
-    if not mem["weekly_snapshots"]:
-        return "This is Week 1 — no historical data yet. Establish baselines."
 
-    lines = [f"HISTORICAL INTELLIGENCE (Weeks 1–{week - 1}):\n"]
+    lines = []
+
+    # Always inject personal profile if it exists
+    profile = mem.get("personal_profile", {})
+    if profile:
+        lines.append("ACCOUNT OWNER PROFILE (use this for authentic personal content):")
+        lines.append(f"  Name: {profile.get('name', '')}")
+        lines.append(f"  Location: {profile.get('location', '')}")
+        lines.append(f"  Age: {profile.get('age', '')}")
+        lines.append(f"  Background: {profile.get('background', '')}")
+        lines.append(f"  Why Claude: {profile.get('why_started', '')}")
+        lines.append(f"  Current status: {profile.get('current_status', '')}")
+        lines.append(f"  What they're building: {profile.get('the_bot', '')}")
+        lines.append(f"  Real struggles: {profile.get('struggles', '')}")
+        lines.append(f"  Goals: {profile.get('goals', '')}")
+        lines.append("")
+
+    if not mem["weekly_snapshots"]:
+        lines.append("This is Week 1 — no historical performance data yet. Establish baselines.")
+        return "\n".join(lines)
+
+    lines.append(f"HISTORICAL INTELLIGENCE (Weeks 1–{week - 1}):\n")
 
     # Format leaderboard
     if mem["format_leaderboard"]:

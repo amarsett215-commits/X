@@ -83,10 +83,10 @@ Include these exact sections:
 ## Top 5 Tweet Frameworks (table: Framework | Emotion | Hook Type | Why It Works)
 ## This Week's Angle (based on the biggest opportunity identified)
 
-## 25 Tweets — 5 Per Day, Mon–Fri (8am–6pm EST)
+## 15 Tweets — 3 Per Day, Mon–Fri (8am, 1pm, 6pm EST)
 
-Generate exactly 25 tweets total. Mix formats naturally across the week.
-Include 2 threads worked naturally into the schedule (not forced).
+Generate exactly 15 tweets total. Mix formats naturally across the week.
+Include 1 thread worked naturally into the schedule (not forced).
 No character limit — this account has X Premium.
 
 For each standalone tweet include:
@@ -121,69 +121,125 @@ def _build_tweet_batch_prompt(analysis: dict, week_number: int) -> str:
     patterns = analysis.get("patterns", {})
     opportunity = analysis.get("this_week_opportunity", "")
 
-    from memory import get_memory_context, get_business_log
+    from memory import get_memory_context, get_business_log, get_personal_profile
+    profile = get_personal_profile()
     business_entries = get_business_log(last_n=10)
+
+    # Build business context — only include if real data exists
     business_context = ""
     if business_entries:
-        business_context = "\n\nREAL BUSINESS UPDATES FROM THIS WEEK (use these for authentic content):\n"
+        business_context = "\n\nREAL BUSINESS UPDATES (use ONLY these for any personal metrics):\n"
         for e in business_entries:
             business_context += f"  [{e.get('date', '?')}] {e['text']}\n"
-        business_context += "\nIncorporate these real details into build-in-public tweets — real numbers, real products, real outcomes."
+        business_context += "\nOnly reference numbers, products, and outcomes explicitly stated above."
+    else:
+        business_context = "\n\nNO BUSINESS LOG DATA YET — Week 1, zero sales, no products launched, no metrics to report. Do NOT invent any."
 
-    return f"""You are a ghostwriter for an X account in this niche: {YOUR_NICHE}
+    # Build profile context
+    profile_context = ""
+    if profile:
+        profile_context = f"""
+ACCOUNT OWNER — write FROM this person's perspective:
+- Name: {profile.get('name', 'Anthony')}
+- Age: {profile.get('age', '26')}, from {profile.get('location', 'Philadelphia, PA')}
+- Background: {profile.get('background', '')}
+- Why they started: {profile.get('why_started', '')}
+- What they're building: {profile.get('the_bot', '')}
+- Real struggles: {profile.get('struggles', '')}
+- Goals: {profile.get('goals', '')}
+Use these personal details to make build-in-public content feel like it came from a real human, not a brand.
+"""
+
+    return f"""You are a world-class copywriter and ghostwriter for an X (Twitter) account.
+
+Niche: {YOUR_NICHE}
 Audience: {YOUR_AUDIENCE}
 Tone: {YOUR_TONE}
-Account status: Week {week_number}, ~3 followers, building in public from $0. Zero sales so far — pure raw honesty.
-No character limit (X Premium account).
-
-This week's research shows the top formats are: {", ".join(patterns.get("dominant_formats", []))}
-The biggest opportunity: {opportunity}
+Account: Week {week_number}, 3 followers, 0 sales, building from scratch in public.
+No character limit — X Premium account.
+{profile_context}
+This week's research — top formats: {", ".join(patterns.get("dominant_formats", []))}
+Biggest opportunity: {opportunity}
 {business_context}
 
-Generate a clean tweet batch file with exactly 25 tweets (5 per day, Mon–Fri, 8am–6pm EST).
-Mix of formats: standalone tweets, 1–2 threads worked naturally into the week.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSOLUTE RULES — NEVER BREAK THESE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ZERO FABRICATION — Never invent stats, follower counts, likes, sales, products, income, or any metric not explicitly provided in the business log above. If no data exists, write around it with pure value or honest vulnerability. No exceptions.
+2. NO PLACEHOLDERS — No [your result], [X followers], [insert number]. Every word must be real and complete.
+3. WEEK 1 REALITY — This person has 3 followers and zero sales. Don't write as if they have authority they haven't earned yet. The authority comes from the VALUE of the information, not a claimed track record.
 
-CONTENT PILLARS — enforce this distribution across all 25 tweets:
-- 30% Personal story / build-in-public (real numbers, real setbacks, honest raw progress updates)
-- 30% Insight or lesson learned (something discovered about Claude AI, digital products, or the building process)
-- 20% Hot take / contrarian opinion (challenge a common belief in the niche — make people stop scrolling)
-- 20% Educational thread (teach a specific technique — these are the 2 threads)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COPYWRITING STANDARDS — EVERY TWEET:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Use human psychology levers strategically:
+- CURIOSITY GAP: Open a loop in the first line that the reader must close (never reveal the full picture upfront)
+- IDENTITY THREAT: Challenge a belief the reader holds about themselves ("If you're still doing X, you're leaving money on the table")
+- FUTURE PACING: Paint a vivid before/after that makes the reader feel the transformation before they take action
+- SPECIFICITY AS PROOF: Exact numbers, specific tools, precise steps — specificity signals credibility more than vague claims
+- PATTERN INTERRUPT: Start with something that breaks the scroll — a counterintuitive statement, a raw confession, or an unexpected comparison
+- SOCIAL EXCLUSIVITY: Frame the information as something most people don't know or won't share
 
-Do NOT cluster the same pillar back-to-back. Spread them naturally across the week so the feed feels varied.
-Label each standalone tweet with its pillar in parentheses after the STANDALONE N label — e.g. **STANDALONE 3** (Hot Take)
+The writing must be so good people can't believe it's free. Think: "I can't believe someone just gave this away."
+Write like a 26-year-old from Philly who figured something out and can't stop talking about it — not like a marketer.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WEEK 1 CONTENT STRATEGY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Since there's no performance data yet, Week 1 content = establish WHY people should follow this account.
+
+CONTENT PILLARS for this week:
+- 35% Outside-the-box Claude money-making ideas nobody is talking about (not "write blog posts" — think creative, specific, underutilized use cases that make people go "wait, you can do that?")
+- 25% Personal story / raw journey (use the profile above — the Philly background, the failed careers, the first digital dollar in 2025, the consistency struggle — make it relatable and real)
+- 20% Hot takes / contrarian opinions (challenge a popular belief in the niche confidently)
+- 20% Thread (one educational deep-dive, one build-in-public update)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE BOT TEASE — use 1–2 times this week:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Anthony is building an X automation bot that handles research, content generation, and posting automatically.
+He's going to give it away for FREE to his followers.
+Tease this 1–2 times across the week — create curiosity and make people want to follow to get access.
+Example angles: "I'm building something that does everything I just described automatically. Going to give it away free. Follow to get it first." — keep it vague and exciting, not a full reveal.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CTAs — add to 2–3 high-value tweets:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+End 2–3 of the best value tweets with a soft CTA. Examples:
+- "I'm putting this into a free guide for anyone who follows. Drop a 🔥 and I'll DM it to you."
+- "Building this into a free resource. Follow so you don't miss it when I drop it."
+- "This is going into the free bot I'm giving away. More details soon — follow to stay in the loop."
+CTAs must feel organic and generous, never salesy. The offer is always FREE.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT — exactly 15 tweets (3 per day, Mon–Fri):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Mix: 11–13 standalone tweets + 1 thread (5–7 tweets). Thread counts as one day slot.
+Spread pillars naturally — no two same-pillar tweets back to back.
 
 FORMAT:
 ## STANDALONE TWEETS
 
-**STANDALONE 1**
+**STANDALONE 1** (Hot Take)
 [tweet text]
 
-**STANDALONE 2**
+**STANDALONE 2** (Personal Story)
 [tweet text]
 
-... up to STANDALONE 20 (or fewer if threads take up slots)
+... up to STANDALONE 13
 
-## THREAD 1 — BUILD IN PUBLIC (Week {week_number} Update)
+## THREAD 1 — [Title]
 
 **TWEET 1**
-[hook tweet]
+[hook]
 
 **TWEET 2**
-[tweet]
+[body]
 
 ... 5–7 tweets total
 
-## THREAD 2 — TUTORIAL: [Framework Name]
-
-**TWEET 1**
-[hook tweet]
-
-... 5–7 tweets total
-
-Label each tweet clearly. No preamble, no analysis — just the tweets.
-Make them specific and complete — no placeholder brackets.
-Build-in-public thread: honest Week {week_number} journey. Reference real business updates above if available.
-Tutorial thread: teach a specific Claude AI technique for building digital products."""
+Label each clearly. No preamble, no analysis — just the tweets, ready to post.
+Every tweet must be complete, specific, and so good it could go viral on its own."""
 
 
 def generate_weekly_sop(analysis: dict, week_number: int) -> tuple[str, str]:
