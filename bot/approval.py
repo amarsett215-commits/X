@@ -136,8 +136,8 @@ def parse_tweets_from_batch(content: str) -> dict:
     elif idx_t1 > 0:
         thread1_section = content[idx_t1:]
 
-    # Extract standalone tweets (labelled TWEET 1, TWEET 2, etc.)
-    result["standalone"] = _extract_numbered_tweets(standalone_section, limit=7)
+    # Extract standalone tweets (labelled STANDALONE N or TWEET N)
+    result["standalone"] = _extract_standalone_tweets(standalone_section, limit=7)
 
     # Extract thread tweets
     result["thread_1"] = _extract_numbered_tweets(thread1_section, limit=7)
@@ -146,14 +146,31 @@ def parse_tweets_from_batch(content: str) -> dict:
     return result
 
 
+def _extract_standalone_tweets(section: str, limit: int = 7) -> list[str]:
+    """Pull tweet bodies from standalone section using STANDALONE N or TWEET N labels."""
+    # Try STANDALONE N first (e.g. **STANDALONE 1**)
+    pattern = re.compile(r"\*{0,2}STANDALONE\s+\d+\*{0,2}\s*\n(.*?)(?=\*{0,2}STANDALONE\s+\d+|##|$)", re.IGNORECASE | re.DOTALL)
+    matches = pattern.findall(section)
+    if not matches:
+        # Fall back to TWEET N labels
+        return _extract_numbered_tweets(section, limit)
+    tweets = []
+    for m in matches[:limit]:
+        text = m.strip()
+        text = re.sub(r"^[-•*]\s+", "", text, flags=re.MULTILINE)
+        text = text.strip()
+        if len(text) > 10:
+            tweets.append(text)
+    return tweets
+
+
 def _extract_numbered_tweets(section: str, limit: int = 7) -> list[str]:
     """Pull tweet bodies from a section using TWEET N labels."""
-    pattern = re.compile(r"TWEET\s+\d+\s*[:\-—]?\s*\n?(.*?)(?=TWEET\s+\d+|$)", re.IGNORECASE | re.DOTALL)
+    pattern = re.compile(r"\*{0,2}TWEET\s+\d+\*{0,2}\s*\n?(.*?)(?=\*{0,2}TWEET\s+\d+\*{0,2}|##|$)", re.IGNORECASE | re.DOTALL)
     matches = pattern.findall(section)
     tweets = []
     for m in matches[:limit]:
         text = m.strip()
-        # Remove markdown formatting artifacts
         text = re.sub(r"^[-•*]\s+", "", text, flags=re.MULTILINE)
         text = text.strip()
         if len(text) > 10:
