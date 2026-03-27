@@ -4,7 +4,7 @@ SOP generator — takes the analysis output and produces:
 1. A weekly SOP markdown file with:
    - Top tweet breakdown (format, emotion, result)
    - Extracted frameworks
-   - 14-tweet batch ready to post (7 standalone + 2 threads)
+   - 25-tweet batch ready to post (5 per day, Mon–Fri)
    - Posting schedule for the week
 
 2. A tweet_batch.md with copy-paste ready tweets
@@ -48,7 +48,11 @@ AUDIENCE: {YOUR_AUDIENCE}
 TONE: {YOUR_TONE}
 
 This is Week {week_number} of building in public.
-The account owner has $0 in digital product sales so far and is documenting the journey from zero.
+ACCOUNT STATUS: ~3 followers, 1 tweet posted, 8 replies. Pure Day 0 build-in-public energy.
+Strategy: zero authority posturing. Raw honesty, specific numbers, real actions taken.
+No income claims. No "I made $X" unless from business log. Document the process, not the results yet.
+
+{get_memory_context(week_number)}
 
 RESEARCH FROM THIS WEEK'S TOP TWEETS:
 
@@ -79,24 +83,22 @@ Include these exact sections:
 ## Top 5 Tweet Frameworks (table: Framework | Emotion | Hook Type | Why It Works)
 ## This Week's Angle (based on the biggest opportunity identified)
 
-## 7 Standalone Tweets
-For each tweet include:
+## 25 Tweets — 5 Per Day, Mon–Fri (8am–6pm EST)
+
+Generate exactly 25 tweets total. Mix formats naturally across the week.
+Include 2 threads worked naturally into the schedule (not forced).
+No character limit — this account has X Premium.
+
+For each standalone tweet include:
 - Tweet number and sub-topic
 - Format label
-- Emotion triggered
-- The tweet text (ready to copy-paste, no quotation marks around it)
-- One line on why this will work
+- The tweet text (ready to copy-paste, no quotation marks)
 
-## Thread 1 — Build in Public (7 tweets)
-Week {week_number} build-in-public thread. Honest, no income claimed (account is at Day {week_number * 7}).
-Reference specific actions taken (building products, writing copy, setting up funnels).
-Tweet 1 is the hook. Tweets 2-6 are value. Tweet 7 has a CTA to follow.
+Threads: label with THREAD A or THREAD B and include 5–8 tweets each.
+Thread 1: Build in Public — Week {week_number} honest update. Real actions, no income claims unless from business log.
+Thread 2: Framework/Tutorial — teach a specific Claude AI technique or digital product strategy.
 
-## Thread 2 — Framework/Tutorial Thread (7 tweets)
-A deep-dive on the biggest opportunity identified this week.
-Tweet 1 is the hook. Tweets 2-6 deliver the framework. Tweet 7 has a soft CTA.
-
-## Posting Schedule (table: Day | Content | Time | Notes)
+## Posting Schedule (table: Day | Slot | Content Type | Time EST)
 
 ## Claude Prompt to Generate More Tweets Like These
 Include a ready-to-use Claude prompt the user can run to generate 10 more tweets
@@ -107,10 +109,11 @@ in the same style as the top performers this week.
 
 ---
 Make all tweet text direct, punchy, and in this tone: {YOUR_TONE}.
-All tweets must be under 280 characters unless they are thread tweets (which can be longer).
+No character limit — X Premium account, tweets can be as long as needed.
 Do NOT add quotation marks around tweet text.
 Do NOT include placeholder brackets like [X] or [your result] — write specific, complete tweets.
-For the build-in-public thread, use realistic specifics for Week {week_number} of a zero-to-first-sale journey."""
+For build-in-public content: Week {week_number}, ~3 followers, zero sales so far. Pure raw honesty wins.
+If business log entries exist above, reference those real details in the build-in-public content."""
 
 
 def _build_tweet_batch_prompt(analysis: dict, week_number: int) -> str:
@@ -118,22 +121,60 @@ def _build_tweet_batch_prompt(analysis: dict, week_number: int) -> str:
     patterns = analysis.get("patterns", {})
     opportunity = analysis.get("this_week_opportunity", "")
 
+    from memory import get_memory_context, get_business_log
+    business_entries = get_business_log(last_n=10)
+    business_context = ""
+    if business_entries:
+        business_context = "\n\nREAL BUSINESS UPDATES FROM THIS WEEK (use these for authentic content):\n"
+        for e in business_entries:
+            business_context += f"  [{e.get('date', '?')}] {e['text']}\n"
+        business_context += "\nIncorporate these real details into build-in-public tweets — real numbers, real products, real outcomes."
+
     return f"""You are a ghostwriter for an X account in this niche: {YOUR_NICHE}
 Audience: {YOUR_AUDIENCE}
 Tone: {YOUR_TONE}
-Account status: Week {week_number}, building in public from $0, documenting the journey.
+Account status: Week {week_number}, ~3 followers, building in public from $0. Zero sales so far — pure raw honesty.
+No character limit (X Premium account).
 
 This week's research shows the top formats are: {", ".join(patterns.get("dominant_formats", []))}
 The biggest opportunity: {opportunity}
+{business_context}
 
-Generate a clean tweet batch file with exactly:
-- 7 standalone tweets (copy-paste ready, under 280 chars each)
-- 2 threads (7 tweets each, with TWEET 1, TWEET 2 etc labels)
+Generate a clean tweet batch file with exactly 25 tweets (5 per day, Mon–Fri, 8am–6pm EST).
+Mix of formats: standalone tweets, 1–2 threads worked naturally into the week.
+
+FORMAT:
+## STANDALONE TWEETS
+
+**STANDALONE 1**
+[tweet text]
+
+**STANDALONE 2**
+[tweet text]
+
+... up to STANDALONE 20 (or fewer if threads take up slots)
+
+## THREAD 1 — BUILD IN PUBLIC (Week {week_number} Update)
+
+**TWEET 1**
+[hook tweet]
+
+**TWEET 2**
+[tweet]
+
+... 5–7 tweets total
+
+## THREAD 2 — TUTORIAL: [Framework Name]
+
+**TWEET 1**
+[hook tweet]
+
+... 5–7 tweets total
 
 Label each tweet clearly. No preamble, no analysis — just the tweets.
 Make them specific and complete — no placeholder brackets.
-Build-in-public thread must reference real Week {week_number} activities (building products, testing copy, etc).
-Tutorial thread must teach a specific Claude AI framework for building digital products."""
+Build-in-public thread: honest Week {week_number} journey. Reference real business updates above if available.
+Tutorial thread: teach a specific Claude AI technique for building digital products."""
 
 
 def generate_weekly_sop(analysis: dict, week_number: int) -> tuple[str, str]:
@@ -191,7 +232,7 @@ def generate_weekly_sop(analysis: dict, week_number: int) -> tuple[str, str]:
 
     with client.messages.stream(
         model=MODEL,
-        max_tokens=6000,
+        max_tokens=12000,
         messages=[{"role": "user", "content": batch_prompt}],
     ) as stream:
         for event in stream:

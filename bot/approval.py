@@ -29,6 +29,102 @@ from config import OUTPUT_DIR
 log = logging.getLogger(__name__)
 
 APPROVAL_FILE = os.path.join(OUTPUT_DIR, "pending_approval.json")
+QUEUE_FILE = os.path.join(OUTPUT_DIR, "posting_queue.json")
+
+
+# ── Queue storage ─────────────────────────────────────────────────────────────
+
+
+def _load_queue() -> list:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    if not os.path.exists(QUEUE_FILE):
+        return []
+    with open(QUEUE_FILE, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_queue(queue: list) -> None:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(QUEUE_FILE, "w", encoding="utf-8") as f:
+        json.dump(queue, f, indent=2, ensure_ascii=False)
+
+
+def save_to_queue(items: list[dict], week: int) -> int:
+    """
+    Save tweet items to the posting queue.
+    Each item: {"type": "standalone"|"thread", "text": str} or {"type": "thread", "tweets": [str]}
+    Returns total items queued.
+    """
+    queue = _load_queue()
+    for item in items:
+        entry = {
+            "id": str(uuid.uuid4()),
+            "week": week,
+            "type": item.get("type", "standalone"),
+            "status": "pending",
+            "queued_at": datetime.now().isoformat(),
+            "posted_at": None,
+            "tweet_id": None,
+        }
+        if item["type"] == "thread":
+            entry["tweets"] = item["tweets"]
+        else:
+            entry["text"] = item["text"]
+        queue.append(entry)
+    _save_queue(queue)
+    return len(items)
+
+
+def post_next_from_queue() -> dict:
+    """
+    Post the next pending item from the queue.
+    Called by n8n at scheduled times (8am, 10:30am, 1pm, 3:30pm, 6pm EST Mon–Fri).
+    """
+    client = _get_x_client()
+    if not client:
+        return {"success": False, "error": "X API credentials not configured", "remaining": 0}
+
+    queue = _load_queue()
+    pending = [t for t in queue if t["status"] == "pending"]
+    if not pending:
+        return {"success": False, "empty": True, "message": "Queue is empty", "remaining": 0}
+
+    item = pending[0]
+
+    if item["type"] == "thread":
+        results = _post_thread(client, item["tweets"])
+        success = all(r.get("success") for r in results)
+        for q in queue:
+            if q["id"] == item["id"]:
+                q["status"] = "posted" if success else "failed"
+                q["posted_at"] = datetime.now().isoformat()
+        _save_queue(queue)
+        remaining = len([t for t in queue if t["status"] == "pending"])
+        return {"success": success, "type": "thread", "tweets_posted": len(results), "remaining": remaining}
+    else:
+        result = _post_tweet(client, item["text"])
+        for q in queue:
+            if q["id"] == item["id"]:
+                q["status"] = "posted" if result["success"] else "failed"
+                q["posted_at"] = datetime.now().isoformat()
+                if result.get("tweet_id"):
+                    q["tweet_id"] = result["tweet_id"]
+        _save_queue(queue)
+        remaining = len([t for t in queue if t["status"] == "pending"])
+        return {**result, "type": "standalone", "remaining": remaining}
+
+
+def get_queue_status() -> dict:
+    """Return current queue status."""
+    queue = _load_queue()
+    pending = [t for t in queue if t["status"] == "pending"]
+    posted = [t for t in queue if t["status"] == "posted"]
+    return {
+        "total": len(queue),
+        "pending": len(pending),
+        "posted": len(posted),
+        "next_up": pending[0].get("text", "thread")[:80] if pending else None,
+    }
 
 
 # ── Storage ───────────────────────────────────────────────────────────────────
@@ -202,45 +298,38 @@ def _get_x_client() -> Optional[tweepy.Client]:
 
 def schedule_to_buffer(pending: dict) -> list[dict]:
     """
-    Post the approved tweet batch to X via the API.
-
-    Posts all standalone tweets immediately, then posts threads as reply chains.
-    Rename kept as schedule_to_buffer for API compatibility.
-
-    Returns a list of result dicts: [{success, tweet, posted_at, error?}]
+    Save approved tweet batch to the posting queue.
+    n8n will drip-post Mon–Fri at 8am, 10:30am, 1pm, 3:30pm, 6pm EST.
+    Threads are queued as groups and posted as reply chains when their slot comes.
     """
-    client = _get_x_client()
-    if not client:
-        return [{"success": False, "error": "X API credentials not configured. Set X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET."}]
-
     content = pending.get("tweet_content", "")
+    week = pending.get("week", 1)
     parsed = parse_tweets_from_batch(content)
-    results = []
 
-    # Post standalone tweets
-    for tweet_text in parsed["standalone"][:5]:
-        result = _post_tweet(client, tweet_text)
-        results.append(result)
-
-    # Post Thread 1 as a reply chain
+    items = []
+    for text in parsed["standalone"]:
+        items.append({"type": "standalone", "text": text})
     if parsed["thread_1"]:
-        thread_results = _post_thread(client, parsed["thread_1"])
-        results.extend(thread_results)
-
-    # Post Thread 2 as a reply chain
+        items.append({"type": "thread", "tweets": parsed["thread_1"]})
     if parsed["thread_2"]:
-        thread_results = _post_thread(client, parsed["thread_2"])
-        results.extend(thread_results)
+        items.append({"type": "thread", "tweets": parsed["thread_2"]})
 
-    success_count = sum(1 for r in results if r.get("success"))
-    log.info(f"X posting complete: {success_count}/{len(results)} succeeded.")
+    count = save_to_queue(items, week)
+    log.info(f"Queued {count} items for Week {week}. Bot will post Mon–Fri 8am–6pm EST.")
+
+    results = []
+    for item in items:
+        if item["type"] == "thread":
+            results.append({"success": True, "tweet": f"Thread ({len(item['tweets'])} tweets)", "status": "queued"})
+        else:
+            results.append({"success": True, "tweet": item["text"][:60], "status": "queued"})
     return results
 
 
 def _post_tweet(client: tweepy.Client, text: str, reply_to_id: Optional[str] = None) -> dict:
     """Post a single tweet. Optionally as a reply."""
     try:
-        kwargs = {"text": text[:280]}
+        kwargs = {"text": text}  # X Premium — no character limit
         if reply_to_id:
             kwargs["in_reply_to_tweet_id"] = reply_to_id
         response = client.create_tweet(**kwargs)

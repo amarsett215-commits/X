@@ -41,6 +41,8 @@ from approval import (
     get_pending,
     mark_approved,
     schedule_to_buffer,
+    post_next_from_queue,
+    get_queue_status,
 )
 from config import OUTPUT_DIR
 
@@ -245,57 +247,131 @@ def approve_and_schedule(token: str):
             _page("Already Approved", f"<p>This batch was already approved on {approved_at}.</p>")
         )
 
-    # Schedule to Buffer
-    log.info(f"Approving token {token[:8]}... — scheduling to Buffer")
+    # Save to posting queue (n8n drip-posts Mon–Fri 8am–6pm EST)
+    log.info(f"Approving token {token[:8]}... — saving to posting queue")
     results = schedule_to_buffer(pending)
     mark_approved(token, results)
 
+    from approval import get_queue_status
+    q = get_queue_status()
     success_count = sum(1 for r in results if r.get("success"))
-    fail_count = len(results) - success_count
 
     rows = ""
     for r in results:
-        status_icon = "✓" if r.get("success") else "✗"
-        status_color = "#2e7d32" if r.get("success") else "#c62828"
-        scheduled = r.get("scheduled_at", r.get("error", ""))
-        thread_pos = f" (thread tweet {r['thread_position']})" if "thread_position" in r else ""
+        label = r.get("tweet", "")
+        status = r.get("status", "queued")
         rows += f"""
         <tr>
-            <td style="padding:10px;border-bottom:1px solid #eee;color:{status_color};width:30px;text-align:center">{status_icon}</td>
-            <td style="padding:10px;border-bottom:1px solid #eee;font-size:13px">{r.get('tweet', '')[:60]}{thread_pos}...</td>
-            <td style="padding:10px;border-bottom:1px solid #eee;font-size:13px;color:#888">{scheduled}</td>
+            <td style="padding:12px;border-bottom:1px solid #eee;color:#2e7d32;width:30px;text-align:center">✓</td>
+            <td style="padding:12px;border-bottom:1px solid #eee;font-size:14px;line-height:1.5">{label}</td>
+            <td style="padding:12px;border-bottom:1px solid #eee;font-size:13px;color:#888">{status}</td>
         </tr>"""
-
-    buffer_note = ""
-    if fail_count > 0:
-        buffer_note = f"""<div style="background:#fff3e0;padding:12px;border-radius:6px;margin:16px 0;font-size:14px">
-            {fail_count} tweet(s) failed to schedule. Check that BUFFER_ACCESS_TOKEN and BUFFER_PROFILE_ID are set correctly.
-        </div>"""
 
     body = f"""
         <div style="border-left:4px solid #2e7d32;padding-left:16px;margin-bottom:24px">
-            <h2 style="margin:0;color:#2e7d32">Week {pending['week']} Approved</h2>
-            <p style="margin:4px 0 0;color:#888">{success_count} tweets scheduled to Buffer · {datetime.now().strftime('%B %d, %Y')}</p>
+            <h2 style="margin:0;color:#2e7d32">Week {pending['week']} Queued</h2>
+            <p style="margin:4px 0 0;color:#888">{q['pending']} tweets ready · will post Mon–Fri 8am–6pm EST · {datetime.now().strftime('%B %d, %Y')}</p>
         </div>
-        {buffer_note}
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <p style="color:#555;font-size:14px">Tweets are in the queue. n8n will post them automatically at scheduled times. You don't need to do anything else.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:16px">
             <thead>
                 <tr style="background:#f5f5f5">
                     <th style="padding:10px;text-align:left"></th>
-                    <th style="padding:10px;text-align:left">Tweet</th>
-                    <th style="padding:10px;text-align:left">Scheduled</th>
+                    <th style="padding:10px;text-align:left">Content</th>
+                    <th style="padding:10px;text-align:left">Status</th>
                 </tr>
             </thead>
             <tbody>{rows}</tbody>
         </table>
-        <div style="text-align:center;margin:32px 0">
-            <a href="https://buffer.com/app"
-               style="display:inline-block;background:#1DA1F2;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:14px">
-                View in Buffer →
-            </a>
-        </div>
     """
-    return HTMLResponse(_page("Approved & Scheduled", body))
+    return HTMLResponse(_page("Queued for Posting", body))
+
+
+@app.post("/post-next")
+def post_next():
+    """
+    Post the next tweet from the queue.
+    Called by n8n at scheduled times: Mon–Fri at 8am, 10:30am, 1pm, 3:30pm, 6pm EST.
+    """
+    result = post_next_from_queue()
+    return result
+
+
+@app.get("/queue")
+def queue_status():
+    """Check current posting queue status."""
+    return get_queue_status()
+
+
+@app.get("/weekly-summary")
+def weekly_summary(send_email: bool = Query(default=True)):
+    """
+    Generate and optionally email a detailed weekly performance summary.
+    Call this Sunday evening or whenever you want a debrief.
+    n8n triggers this automatically every Sunday at 7pm EST.
+    """
+    import anthropic as anth
+    from memory import get_memory_context, get_business_log
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set")
+
+    from config import MODEL, YOUR_NICHE
+    memory_ctx = get_memory_context(week=99)  # Get all history
+    business_log = get_business_log(last_n=20)
+    business_text = "\n".join([f"[{e.get('date','?')}] {e['text']}" for e in business_log]) if business_log else "No updates logged yet."
+
+    prompt = f"""You are a strategic advisor for an X (Twitter) account in this niche: {YOUR_NICHE}
+
+The account owner is in the early stages (< 10 followers, just starting out).
+
+MEMORY & PERFORMANCE DATA:
+{memory_ctx}
+
+BUSINESS LOG FROM THIS WEEK:
+{business_text}
+
+Generate a detailed, honest weekly summary email. Include:
+
+1. **What Worked This Week** — specific formats, hooks, or angles that performed
+2. **What Didn't Work** — honest assessment of what flopped and why
+3. **Your Build-in-Public Score** — how authentic and raw was the content this week (1-10)
+4. **Growth Analysis** — follower movement, engagement patterns, what's attracting people
+5. **Top Insight** — the single most important thing learned this week
+6. **Next Week's Strategy** — 3 specific, actionable changes to make
+7. **Content Angles to Avoid** — what's oversaturated or not working in the niche right now
+8. **The One Tweet to Write** — give them one specific tweet to write this weekend as a momentum builder
+
+Be direct. No fluff. If they had a bad week, say so clearly and explain why.
+Write like a smart advisor who genuinely wants them to grow, not a cheerleader."""
+
+    client_ai = anth.Anthropic()
+    summary_text = ""
+    with client_ai.messages.stream(
+        model=MODEL,
+        max_tokens=4000,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for event in stream:
+            if event.type == "content_block_delta" and event.delta.type == "text_delta":
+                summary_text += event.delta.text
+
+    email_sent = False
+    if send_email:
+        subject = f"[X Bot] Weekly Summary — {datetime.now().strftime('%B %d, %Y')}"
+        html = f"""<html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:700px;margin:0 auto;padding:20px;color:#333">
+        <div style="border-left:4px solid #1DA1F2;padding-left:16px;margin-bottom:24px">
+            <h2 style="margin:0;color:#1DA1F2">Weekly Summary</h2>
+            <p style="margin:4px 0 0;color:#888">X Account Bot · {datetime.now().strftime('%B %d, %Y')}</p>
+        </div>
+        <div style="font-size:15px;line-height:1.7;white-space:pre-wrap">{summary_text}</div>
+        <hr style="border:none;border-top:1px solid #eee;margin:32px 0">
+        <p style="color:#aaa;font-size:12px">X Account Bot — Weekly Debrief</p>
+        </body></html>"""
+        email_sent = _send_approval_email(subject, html)
+
+    return {"summary": summary_text, "email_sent": email_sent}
 
 
 @app.get("/status")

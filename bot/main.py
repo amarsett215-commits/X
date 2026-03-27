@@ -132,6 +132,25 @@ def print_done(week: int, sop_path: str, batch_path: str) -> None:
 
 # ── Memory commands ───────────────────────────────────────────────────────────
 
+def _cmd_reset_memory() -> None:
+    """Wipe all memory, queue, and generated output files. Use before real Week 1."""
+    import glob as glob_module
+    confirm = input("\n  This will delete all memory, queue, and output files. Type YES to confirm: ").strip()
+    if confirm != "YES":
+        print("  Cancelled.\n")
+        return
+
+    deleted = []
+    # Wipe output files
+    for pattern in ["week_*.md", "week_*.json", "memory.json", "pending_approval.json", "posting_queue.json", "bot.log"]:
+        for f in glob_module.glob(os.path.join(OUTPUT_DIR, pattern)):
+            os.remove(f)
+            deleted.append(os.path.basename(f))
+
+    print(f"\n  ✓ Reset complete. Deleted {len(deleted)} files.")
+    print("  Memory, queue, and all test runs wiped. You're starting fresh.\n")
+
+
 def cmd_log_tweet(week: int) -> None:
     """Interactive prompt to log a posted tweet's performance."""
     print("\n  LOG TWEET PERFORMANCE")
@@ -177,11 +196,17 @@ def main() -> None:
                         help="Interactively log a posted tweet's performance")
     parser.add_argument("--update", type=str, metavar="TEXT",
                         help="Log a real business update (used in tweet generation)")
+    parser.add_argument("--reset-memory", action="store_true",
+                        help="Wipe all memory, queue, and test runs before real Week 1")
     args = parser.parse_args()
 
     week = args.week or detect_week_number()
 
     # ── Memory-only commands (no API key needed) ──
+    if args.reset_memory:
+        _cmd_reset_memory()
+        return
+
     if args.update:
         log_business_update(text=args.update, week=week)
         return
