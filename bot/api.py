@@ -115,8 +115,8 @@ def health():
         "status": "ok",
         "time": datetime.now().isoformat(),
         "api_key_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "buffer_configured": bool(
-            os.environ.get("BUFFER_ACCESS_TOKEN") and os.environ.get("BUFFER_PROFILE_ID")
+        "x_configured": bool(
+            os.environ.get("X_API_KEY") and os.environ.get("X_ACCESS_TOKEN")
         ),
         "email_configured": bool(
             os.environ.get("EMAIL_FROM") and os.environ.get("EMAIL_TO")
@@ -297,8 +297,8 @@ def status():
         "last_run": last_run,
         "pending_approvals": pending_count,
         "history": pending_items[-5:],
-        "buffer_ready": bool(
-            os.environ.get("BUFFER_ACCESS_TOKEN") and os.environ.get("BUFFER_PROFILE_ID")
+        "x_configured": bool(
+            os.environ.get("X_API_KEY") and os.environ.get("X_ACCESS_TOKEN")
         ),
     }
 

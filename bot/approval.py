@@ -4,12 +4,14 @@ Approval and scheduling layer.
 Handles:
 - Generating one-time approval tokens after a pipeline run
 - Storing pending tweet batches
-- Scheduling approved tweets to Buffer (no X API required)
+- Posting approved tweets directly to X via the API
 - Parsing tweet batches into individual postable units
 
-Environment variables required for Buffer posting:
-    BUFFER_ACCESS_TOKEN   — from buffer.com/developers/apps
-    BUFFER_PROFILE_ID     — your X profile ID in Buffer
+Environment variables required for X posting:
+    X_API_KEY             — Consumer Key from console.x.com
+    X_API_SECRET          — Secret Key (Consumer Secret) from console.x.com
+    X_ACCESS_TOKEN        — Access Token from console.x.com
+    X_ACCESS_TOKEN_SECRET — Access Token Secret from console.x.com
 """
 
 import json
@@ -20,14 +22,13 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-import requests
+import tweepy
 
 from config import OUTPUT_DIR
 
 log = logging.getLogger(__name__)
 
 APPROVAL_FILE = os.path.join(OUTPUT_DIR, "pending_approval.json")
-BUFFER_API_BASE = "https://api.bufferapp.com/1"
 
 
 # ── Storage ───────────────────────────────────────────────────────────────────
@@ -160,98 +161,92 @@ def _extract_numbered_tweets(section: str, limit: int = 7) -> list[str]:
     return tweets
 
 
-# ── Buffer scheduling ─────────────────────────────────────────────────────────
+# ── X API posting ─────────────────────────────────────────────────────────────
+
+
+def _get_x_client() -> Optional[tweepy.Client]:
+    """Build and return an authenticated Tweepy client, or None if credentials missing."""
+    api_key = os.environ.get("X_API_KEY", "")
+    api_secret = os.environ.get("X_API_SECRET", "")
+    access_token = os.environ.get("X_ACCESS_TOKEN", "")
+    access_token_secret = os.environ.get("X_ACCESS_TOKEN_SECRET", "")
+
+    if not all([api_key, api_secret, access_token, access_token_secret]):
+        log.error("X API credentials not set. Need: X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET")
+        return None
+
+    return tweepy.Client(
+        consumer_key=api_key,
+        consumer_secret=api_secret,
+        access_token=access_token,
+        access_token_secret=access_token_secret,
+    )
 
 
 def schedule_to_buffer(pending: dict) -> list[dict]:
     """
-    Schedule the approved tweet batch to Buffer.
+    Post the approved tweet batch to X via the API.
 
-    Posts standalone tweets Mon–Fri at 9 AM in the next calendar week.
-    Threads are posted as reply chains (Buffer supports this for threads).
+    Posts all standalone tweets immediately, then posts threads as reply chains.
+    Rename kept as schedule_to_buffer for API compatibility.
 
-    Returns a list of result dicts: [{success, tweet, scheduled_at, error?}]
+    Returns a list of result dicts: [{success, tweet, posted_at, error?}]
     """
-    access_token = os.environ.get("BUFFER_ACCESS_TOKEN", "")
-    profile_id = os.environ.get("BUFFER_PROFILE_ID", "")
-
-    if not access_token or not profile_id:
-        log.error("BUFFER_ACCESS_TOKEN or BUFFER_PROFILE_ID not set.")
-        return [{"success": False, "error": "Buffer credentials not configured. Set BUFFER_ACCESS_TOKEN and BUFFER_PROFILE_ID."}]
+    client = _get_x_client()
+    if not client:
+        return [{"success": False, "error": "X API credentials not configured. Set X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET."}]
 
     content = pending.get("tweet_content", "")
     parsed = parse_tweets_from_batch(content)
-
-    # Build Mon–Fri posting schedule for next week
-    posting_slots = _next_week_slots(start_hour=9)
-
     results = []
-    slot_index = 0
 
-    # Schedule standalone tweets (Mon–Fri, one per day)
+    # Post standalone tweets
     for tweet_text in parsed["standalone"][:5]:
-        if slot_index >= len(posting_slots):
-            break
-        result = _post_to_buffer(access_token, profile_id, tweet_text, posting_slots[slot_index])
+        result = _post_tweet(client, tweet_text)
         results.append(result)
-        slot_index += 1
 
-    # Schedule Thread 1 (build-in-public) on Wednesday at 10 AM
+    # Post Thread 1 as a reply chain
     if parsed["thread_1"]:
-        thread_results = _post_thread_to_buffer(
-            access_token, profile_id, parsed["thread_1"],
-            base_time=_next_weekday(2, hour=10)  # Wednesday
-        )
+        thread_results = _post_thread(client, parsed["thread_1"])
         results.extend(thread_results)
 
-    # Schedule Thread 2 (framework) on Friday at 10 AM
+    # Post Thread 2 as a reply chain
     if parsed["thread_2"]:
-        thread_results = _post_thread_to_buffer(
-            access_token, profile_id, parsed["thread_2"],
-            base_time=_next_weekday(4, hour=10)  # Friday
-        )
+        thread_results = _post_thread(client, parsed["thread_2"])
         results.extend(thread_results)
 
     success_count = sum(1 for r in results if r.get("success"))
-    log.info(f"Buffer scheduling complete: {success_count}/{len(results)} succeeded.")
+    log.info(f"X posting complete: {success_count}/{len(results)} succeeded.")
     return results
 
 
-def _post_to_buffer(access_token: str, profile_id: str, text: str, scheduled_at: datetime) -> dict:
-    """Post a single tweet to Buffer."""
+def _post_tweet(client: tweepy.Client, text: str, reply_to_id: Optional[str] = None) -> dict:
+    """Post a single tweet. Optionally as a reply."""
     try:
-        resp = requests.post(
-            f"{BUFFER_API_BASE}/updates/create.json",
-            data={
-                "access_token": access_token,
-                "profile_ids[]": profile_id,
-                "text": text[:280],
-                "scheduled_at": scheduled_at.isoformat(),
-                "now": "false",
-            },
-            timeout=15,
-        )
-        resp.raise_for_status()
+        kwargs = {"text": text[:280]}
+        if reply_to_id:
+            kwargs["in_reply_to_tweet_id"] = reply_to_id
+        response = client.create_tweet(**kwargs)
+        tweet_id = response.data["id"]
         return {
             "success": True,
             "tweet": text[:60],
-            "scheduled_at": scheduled_at.strftime("%a %b %d at %I:%M %p"),
+            "tweet_id": tweet_id,
+            "posted_at": datetime.now().strftime("%a %b %d at %I:%M %p"),
         }
-    except requests.HTTPError as e:
-        return {"success": False, "tweet": text[:60], "error": str(e), "response": resp.text[:200]}
     except Exception as e:
         return {"success": False, "tweet": text[:60], "error": str(e)}
 
 
-def _post_thread_to_buffer(
-    access_token: str, profile_id: str, tweets: list[str], base_time: datetime
-) -> list[dict]:
-    """Post a thread to Buffer. Each tweet is spaced 2 minutes apart."""
+def _post_thread(client: tweepy.Client, tweets: list[str]) -> list[dict]:
+    """Post a list of tweets as a reply chain (thread)."""
     results = []
+    last_id = None
     for i, tweet_text in enumerate(tweets):
-        post_time = base_time + timedelta(minutes=i * 2)
-        result = _post_to_buffer(access_token, profile_id, tweet_text, post_time)
+        result = _post_tweet(client, tweet_text, reply_to_id=last_id)
         result["thread_position"] = i + 1
+        if result.get("success"):
+            last_id = result["tweet_id"]
         results.append(result)
     return results
 
