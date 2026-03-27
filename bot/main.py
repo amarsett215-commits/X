@@ -9,6 +9,11 @@ SKIP FLAGS:
     python main.py --analyze-only         # Skip scraping, reuse saved tweets
     python main.py --sop-only             # Skip scrape + analyze, regenerate SOP
 
+BUSINESS LOG (log real updates daily — bot uses them in tweet generation):
+    python main.py --update "Just went live with a $19 product. No sales yet."
+    python main.py --update "3 sales today. Total revenue: $57."
+    python main.py --update "Build-in-public thread got 847 impressions, 23 new followers."
+
 MEMORY COMMANDS (run after posting your tweets):
     python main.py --memory               # Print full memory report
     python main.py --log-growth 142       # Log your current follower count
@@ -30,7 +35,7 @@ from glob import glob
 from scraper import collect_tweets
 from analyzer import analyze_tweets
 from sop_generator import generate_weekly_sop
-from memory import log_account_growth, log_your_tweet, print_memory_report
+from memory import log_account_growth, log_your_tweet, print_memory_report, log_business_update
 from config import OUTPUT_DIR
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -170,11 +175,17 @@ def main() -> None:
                         help="Log current follower count (e.g. --log-growth 250)")
     parser.add_argument("--log-tweet", action="store_true",
                         help="Interactively log a posted tweet's performance")
+    parser.add_argument("--update", type=str, metavar="TEXT",
+                        help="Log a real business update (used in tweet generation)")
     args = parser.parse_args()
 
     week = args.week or detect_week_number()
 
     # ── Memory-only commands (no API key needed) ──
+    if args.update:
+        log_business_update(text=args.update, week=week)
+        return
+
     if args.memory:
         print_memory_report()
         return

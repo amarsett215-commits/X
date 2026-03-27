@@ -34,6 +34,7 @@ from fastapi.responses import HTMLResponse
 
 sys.path.insert(0, os.path.dirname(__file__))
 
+from memory import log_business_update, get_business_log
 from approval import (
     build_approval_email,
     create_approval,
@@ -106,6 +107,32 @@ def _send_approval_email(subject: str, html_body: str) -> bool:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+
+@app.post("/update")
+def add_business_update(text: str = Query(..., description="Your real business update")):
+    """
+    Log a daily business update. The bot injects these into Claude prompts
+    so generated tweets reference your actual products, numbers, and progress.
+
+    Example:
+        curl -X POST "http://localhost:8000/update?text=Just+went+live+with+a+%2419+product.+No+sales+yet."
+    """
+    week = _detect_week()
+    log_business_update(text=text, week=week)
+    recent = get_business_log(last_n=5)
+    return {
+        "status": "logged",
+        "entry": text,
+        "recent_updates": [e["text"] for e in recent],
+    }
+
+
+@app.get("/updates")
+def list_business_updates():
+    """Return your last 20 logged business updates."""
+    entries = get_business_log(last_n=20)
+    return {"updates": entries, "count": len(entries)}
 
 
 @app.get("/health")

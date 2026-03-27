@@ -39,6 +39,7 @@ EMPTY_MEMORY = {
     "your_tweet_log": [],          # Your own posted tweets + performance
     "best_tweets_all_time": [],    # Top 10 tweets seen across all weeks
     "running_opportunities": [],   # Opportunity angles identified each week
+    "business_log": [],            # Your real daily business updates [{date, text, week}]
 }
 
 
@@ -114,6 +115,17 @@ def get_memory_context(week: int) -> str:
                 f"  Format: {best.get('format', 'unknown')}\n"
                 f"  Text: {best['text'][:100]}..."
             )
+
+    # Your real business updates (most recent 10)
+    if mem.get("business_log"):
+        recent = mem["business_log"][-10:]
+        lines.append("\nYOUR REAL BUSINESS UPDATES (use these to write authentic tweets):")
+        for entry in recent:
+            lines.append(f"  [{entry.get('date', '?')}] {entry['text']}")
+        lines.append(
+            "  → Reference these real updates when writing build-in-public tweets. "
+            "Use actual numbers, products, and outcomes mentioned above."
+        )
 
     lines.append(
         "\nUse this history to: avoid repeating oversaturated angles, "
@@ -315,4 +327,42 @@ def print_memory_report() -> None:
         for opp in mem["running_opportunities"][-4:]:
             print(f"    Week {opp['week']}: {opp['opportunity'][:80]}...")
 
+    if mem.get("business_log"):
+        print(f"\n  YOUR BUSINESS LOG (last 5 entries)")
+        for entry in mem["business_log"][-5:]:
+            print(f"    [{entry.get('date', '?')}] {entry['text'][:80]}")
+
     print("\n" + "=" * 60 + "\n")
+
+
+def log_business_update(text: str, week: int = 0) -> None:
+    """
+    Log a real daily business update. The bot injects these into Claude
+    prompts so generated tweets reference your actual products, numbers,
+    and progress instead of made-up scenarios.
+
+    Usage:
+        python bot/main.py --update "Just went live with a $19 product on Gumroad. No sales yet."
+        python bot/main.py --update "3 sales today on the resume template. Total: $57."
+        python bot/main.py --update "Posted the build-in-public thread. 847 impressions, 23 new followers."
+    """
+    mem = _load()
+    if "business_log" not in mem:
+        mem["business_log"] = []
+
+    entry = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "time": datetime.now().strftime("%H:%M"),
+        "week": week,
+        "text": text.strip(),
+    }
+    mem["business_log"].append(entry)
+    _save(mem)
+    print(f"\n  ✓ Business update logged: \"{text[:80]}\"")
+    print(f"    The bot will use this in next week's tweet generation.\n")
+
+
+def get_business_log(last_n: int = 20) -> list:
+    """Return the most recent N business log entries."""
+    mem = _load()
+    return mem.get("business_log", [])[-last_n:]
