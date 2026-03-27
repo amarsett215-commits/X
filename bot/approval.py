@@ -313,8 +313,8 @@ def parse_tweets_from_batch(content: str) -> dict:
 
 def _extract_standalone_tweets(section: str, limit: int = 7) -> list[str]:
     """Pull tweet bodies from standalone section using STANDALONE N or TWEET N labels."""
-    # Try STANDALONE N first (e.g. **STANDALONE 1**)
-    pattern = re.compile(r"\*{0,2}STANDALONE\s+\d+\*{0,2}\s*\n(.*?)(?=\*{0,2}STANDALONE\s+\d+|##|$)", re.IGNORECASE | re.DOTALL)
+    # Match STANDALONE N with optional pillar label e.g. **STANDALONE 1** (Hot Take)
+    pattern = re.compile(r"\*{0,2}STANDALONE\s+\d+[^\n]*\n(.*?)(?=\*{0,2}STANDALONE\s+\d+|##|$)", re.IGNORECASE | re.DOTALL)
     matches = pattern.findall(section)
     if not matches:
         # Fall back to TWEET N labels

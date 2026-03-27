@@ -24,6 +24,8 @@ import os
 import smtplib
 import sys
 from datetime import datetime
+from email import encoders as email_encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from glob import glob
@@ -81,7 +83,12 @@ def _save_raw_tweets(tweets: list, week: int) -> str:
     return path
 
 
-def _send_approval_email(subject: str, html_body: str) -> bool:
+def _send_approval_email(
+    subject: str,
+    html_body: str,
+    attachment_text: str = None,
+    attachment_name: str = None,
+) -> bool:
     email_from = os.environ.get("EMAIL_FROM", "")
     email_password = os.environ.get("EMAIL_APP_PASSWORD", "")
     email_to = os.environ.get("EMAIL_TO", "")
@@ -91,11 +98,21 @@ def _send_approval_email(subject: str, html_body: str) -> bool:
         return False
 
     try:
-        msg = MIMEMultipart("alternative")
+        msg = MIMEMultipart("mixed")
         msg["Subject"] = subject
         msg["From"] = email_from
         msg["To"] = email_to
-        msg.attach(MIMEText(html_body, "html"))
+
+        html_part = MIMEMultipart("alternative")
+        html_part.attach(MIMEText(html_body, "html"))
+        msg.attach(html_part)
+
+        if attachment_text and attachment_name:
+            att = MIMEBase("application", "octet-stream")
+            att.set_payload(attachment_text.encode("utf-8"))
+            email_encoders.encode_base64(att)
+            att.add_header("Content-Disposition", f"attachment; filename={attachment_name}")
+            msg.attach(att)
 
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(email_from, email_password)
@@ -210,7 +227,12 @@ def run_pipeline(week: Optional[int] = Query(default=None)):
         {"week": current_week, "tweet_content": batch_content, "token": token},
         approval_url,
     )
-    email_sent = _send_approval_email(subject, html_body)
+    email_sent = _send_approval_email(
+        subject,
+        html_body,
+        attachment_text=batch_content,
+        attachment_name=f"week_{current_week:02d}_tweets.txt",
+    )
 
     return {
         "status": "success",
