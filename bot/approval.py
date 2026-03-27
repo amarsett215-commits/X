@@ -18,8 +18,12 @@ import json
 import logging
 import os
 import re
+import smtplib
+import time
 import uuid
 from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Optional
 
 import tweepy
@@ -30,6 +34,43 @@ log = logging.getLogger(__name__)
 
 APPROVAL_FILE = os.path.join(OUTPUT_DIR, "pending_approval.json")
 QUEUE_FILE = os.path.join(OUTPUT_DIR, "posting_queue.json")
+
+HASHTAGS = "#buildinpublic #indiehacker #solofounder"
+
+
+def _append_hashtags(text: str) -> str:
+    """Append discovery hashtags to a standalone tweet."""
+    return f"{text}\n\n{HASHTAGS}"
+
+
+def _send_alert_email(subject: str, body: str) -> None:
+    """Send a simple alert email via SMTP."""
+    email_from = os.environ.get("EMAIL_FROM", "")
+    email_password = os.environ.get("EMAIL_APP_PASSWORD", "")
+    email_to = os.environ.get("EMAIL_TO", "")
+    if not all([email_from, email_password, email_to]):
+        log.warning("Email credentials not set — skipping alert email.")
+        return
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = email_to
+        html = f"""<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <div style="border-left:4px solid #e53e3e;padding-left:16px;margin-bottom:16px">
+            <h2 style="margin:0;color:#e53e3e">X Bot Alert</h2>
+        </div>
+        <p style="font-size:15px;line-height:1.6">{body}</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+        <p style="color:#aaa;font-size:12px">X Account Bot</p>
+        </body></html>"""
+        msg.attach(MIMEText(html, "html"))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(email_from, email_password)
+            server.sendmail(email_from, email_to, msg.as_string())
+        log.info(f"Alert email sent: {subject}")
+    except Exception as e:
+        log.error(f"Failed to send alert email: {e}")
 
 
 # ── Queue storage ─────────────────────────────────────────────────────────────
@@ -79,6 +120,8 @@ def post_next_from_queue() -> dict:
     """
     Post the next pending item from the queue.
     Called by n8n at scheduled times (8am, 10:30am, 1pm, 3:30pm, 6pm EST Mon–Fri).
+    Retries up to 3 times on failure, then emails an alert.
+    Emails an alert if the queue is empty.
     """
     client = _get_x_client()
     if not client:
@@ -87,31 +130,57 @@ def post_next_from_queue() -> dict:
     queue = _load_queue()
     pending = [t for t in queue if t["status"] == "pending"]
     if not pending:
+        _send_alert_email(
+            "[X Bot] Queue Empty — No Tweets to Post",
+            "Your posting queue is empty. The bot tried to post a tweet but there's nothing left.<br><br>"
+            "Run the pipeline and approve a new batch to refill the queue.",
+        )
         return {"success": False, "empty": True, "message": "Queue is empty", "remaining": 0}
 
     item = pending[0]
+    max_attempts = 3
+    last_result = None
+    success = False
+
+    for attempt in range(1, max_attempts + 1):
+        if item["type"] == "thread":
+            results = _post_thread(client, item["tweets"])
+            success = all(r.get("success") for r in results)
+            last_result = {"success": success, "type": "thread", "tweets_posted": len(results)}
+        else:
+            last_result = _post_tweet(client, item["text"])
+            success = last_result.get("success", False)
+
+        if success:
+            break
+
+        if attempt < max_attempts:
+            log.warning(f"Post attempt {attempt} failed — retrying in 2s... Error: {last_result.get('error', '?')}")
+            time.sleep(2)
+        else:
+            error_msg = last_result.get("error", "Unknown error")
+            preview = item.get("text", f"Thread ({len(item.get('tweets', []))} tweets)")[:200]
+            log.error(f"All {max_attempts} post attempts failed: {error_msg}")
+            _send_alert_email(
+                "[X Bot] Tweet Failed to Post — Action Needed",
+                f"A tweet failed to post after {max_attempts} attempts.<br><br>"
+                f"<strong>Error:</strong> {error_msg}<br><br>"
+                f"<strong>Content:</strong> {preview}<br><br>"
+                "Check your X API credits at console.x.com → Billing → Credits",
+            )
+
+    for q in queue:
+        if q["id"] == item["id"]:
+            q["status"] = "posted" if success else "failed"
+            q["posted_at"] = datetime.now().isoformat()
+            if last_result and last_result.get("tweet_id"):
+                q["tweet_id"] = last_result["tweet_id"]
+    _save_queue(queue)
+    remaining = len([t for t in queue if t["status"] == "pending"])
 
     if item["type"] == "thread":
-        results = _post_thread(client, item["tweets"])
-        success = all(r.get("success") for r in results)
-        for q in queue:
-            if q["id"] == item["id"]:
-                q["status"] = "posted" if success else "failed"
-                q["posted_at"] = datetime.now().isoformat()
-        _save_queue(queue)
-        remaining = len([t for t in queue if t["status"] == "pending"])
-        return {"success": success, "type": "thread", "tweets_posted": len(results), "remaining": remaining}
-    else:
-        result = _post_tweet(client, item["text"])
-        for q in queue:
-            if q["id"] == item["id"]:
-                q["status"] = "posted" if result["success"] else "failed"
-                q["posted_at"] = datetime.now().isoformat()
-                if result.get("tweet_id"):
-                    q["tweet_id"] = result["tweet_id"]
-        _save_queue(queue)
-        remaining = len([t for t in queue if t["status"] == "pending"])
-        return {**result, "type": "standalone", "remaining": remaining}
+        return {**last_result, "remaining": remaining}
+    return {**last_result, "type": "standalone", "remaining": remaining}
 
 
 def get_queue_status() -> dict:
@@ -308,7 +377,7 @@ def schedule_to_buffer(pending: dict) -> list[dict]:
 
     items = []
     for text in parsed["standalone"]:
-        items.append({"type": "standalone", "text": text})
+        items.append({"type": "standalone", "text": _append_hashtags(text)})
     if parsed["thread_1"]:
         items.append({"type": "thread", "tweets": parsed["thread_1"]})
     if parsed["thread_2"]:

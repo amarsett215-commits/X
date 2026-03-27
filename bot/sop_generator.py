@@ -143,6 +143,15 @@ The biggest opportunity: {opportunity}
 Generate a clean tweet batch file with exactly 25 tweets (5 per day, Mon–Fri, 8am–6pm EST).
 Mix of formats: standalone tweets, 1–2 threads worked naturally into the week.
 
+CONTENT PILLARS — enforce this distribution across all 25 tweets:
+- 30% Personal story / build-in-public (real numbers, real setbacks, honest raw progress updates)
+- 30% Insight or lesson learned (something discovered about Claude AI, digital products, or the building process)
+- 20% Hot take / contrarian opinion (challenge a common belief in the niche — make people stop scrolling)
+- 20% Educational thread (teach a specific technique — these are the 2 threads)
+
+Do NOT cluster the same pillar back-to-back. Spread them naturally across the week so the feed feels varied.
+Label each standalone tweet with its pillar in parentheses after the STANDALONE N label — e.g. **STANDALONE 3** (Hot Take)
+
 FORMAT:
 ## STANDALONE TWEETS
 
