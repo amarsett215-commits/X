@@ -114,7 +114,8 @@ def _send_approval_email(
             att.add_header("Content-Disposition", f"attachment; filename={attachment_name}")
             msg.attach(att)
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
             server.login(email_from, email_password)
             server.sendmail(email_from, email_to, msg.as_string())
 

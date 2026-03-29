@@ -65,7 +65,8 @@ def _send_alert_email(subject: str, body: str) -> None:
         <p style="color:#aaa;font-size:12px">X Account Bot</p>
         </body></html>"""
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
             server.login(email_from, email_password)
             server.sendmail(email_from, email_to, msg.as_string())
         log.info(f"Alert email sent: {subject}")
